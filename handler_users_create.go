@@ -15,9 +15,12 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-func (c *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
+func (c *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email string `json:"email"`
+	}
+	type response struct {
+		User
 	}
 
 	param := parameters{}
@@ -32,5 +35,12 @@ func (c *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, User(dbResponse))
+	respondWithJSON(w, http.StatusCreated, response{
+		User: User{
+			ID:        dbResponse.ID,
+			CreatedAt: dbResponse.CreatedAt,
+			UpdatedAt: dbResponse.UpdatedAt,
+			Email:     dbResponse.Email,
+		},
+	})
 }

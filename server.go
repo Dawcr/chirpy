@@ -11,14 +11,14 @@ import (
 )
 
 const (
-	port                  = "8080"
-	filepathRoot          = "."
-	filepathSite          = "/app/"
-	filepathHealthz       = "/api/healthz"
-	filepathMetricz       = "/admin/metrics"
-	filepathReset         = "/admin/reset"
-	filepathValidateChirp = "/api/validate_chirp"
-	filepathCreateUser    = "/api/users"
+	port               = "8080"
+	path_Root          = "."
+	path_App           = "/app/"
+	path_Healthz       = "/api/healthz"
+	path_Metricz       = "/admin/metrics"
+	path_Reset         = "/admin/reset"
+	path_ValidateChirp = "/api/validate_chirp"
+	path_CreateUser    = "/api/users"
 )
 
 type apiConfig struct {
@@ -30,7 +30,11 @@ type apiConfig struct {
 func startServer() {
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
-		log.Fatal("DB_URL missing")
+		log.Fatal("DB_URL must be set")
+	}
+	platform := os.Getenv("PLATFORM")
+	if platform == "" {
+		log.Fatal("PLATFORM must be set")
 	}
 
 	db, err := sql.Open("postgres", dbURL)
@@ -42,15 +46,15 @@ func startServer() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             database.New(db),
-		platform:       os.Getenv("PLATFORM"),
+		platform:       platform,
 	}
 
-	mux.Handle(filepathSite, apiCfg.middlewareMetricsInc(http.StripPrefix(filepathSite, http.FileServer(http.Dir(filepathRoot)))))
-	mux.HandleFunc("GET "+filepathHealthz, handlerReadiness)
-	mux.HandleFunc("GET "+filepathMetricz, apiCfg.handlerHitCount)
-	mux.HandleFunc("POST "+filepathReset, apiCfg.handlerReset)
-	mux.HandleFunc("POST "+filepathValidateChirp, handlerChirpsValidation)
-	mux.HandleFunc("POST "+filepathCreateUser, apiCfg.handlerCreateUser)
+	mux.Handle(path_App, apiCfg.middlewareMetricsInc(http.StripPrefix(path_App, http.FileServer(http.Dir(path_Root)))))
+	mux.HandleFunc("GET "+path_Healthz, handlerReadiness)
+	mux.HandleFunc("GET "+path_Metricz, apiCfg.handlerHitCount)
+	mux.HandleFunc("POST "+path_Reset, apiCfg.handlerReset)
+	mux.HandleFunc("POST "+path_ValidateChirp, handlerChirpsValidation)
+	mux.HandleFunc("POST "+path_CreateUser, apiCfg.handlerUsersCreate)
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,
