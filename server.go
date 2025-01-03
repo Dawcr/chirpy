@@ -19,6 +19,7 @@ const (
 	path_Reset      = "/admin/reset"
 	path_Chirps     = "/api/chirps"
 	path_CreateUser = "/api/users"
+	path_Login      = "/api/login"
 )
 
 type apiConfig struct {
@@ -57,6 +58,7 @@ func startServer() {
 	mux.HandleFunc("POST "+path_CreateUser, apiCfg.handlerUsersCreate)
 	mux.HandleFunc("GET "+path_Chirps, apiCfg.handlerChirpsGet)
 	mux.HandleFunc("GET "+path_Chirps+"/{chirpID}", apiCfg.handlerChirpsGetSingle)
+	mux.HandleFunc("POST "+path_Login, apiCfg.handlerUsersLogin)
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,
