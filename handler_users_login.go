@@ -4,13 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/dawcr/chirpy/internal/database/auth"
+	"github.com/dawcr/chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
+	}
+
+	type response struct {
+		User
 	}
 
 	param := parameters{}
@@ -21,19 +25,21 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 
 	dbResponse, err := cfg.db.GetUserByEmail(r.Context(), param.Email)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Unable to retrieve password", err)
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
 	}
 
-	if auth.CheckPasswordHash(param.Password, dbResponse.HashedPassword) != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", nil)
+	if err := auth.CheckPasswordHash(param.Password, dbResponse.HashedPassword); err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, User{
-		ID:        dbResponse.ID,
-		CreatedAt: dbResponse.CreatedAt,
-		UpdatedAt: dbResponse.UpdatedAt,
-		Email:     dbResponse.Email,
+	respondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:        dbResponse.ID,
+			CreatedAt: dbResponse.CreatedAt,
+			UpdatedAt: dbResponse.UpdatedAt,
+			Email:     dbResponse.Email,
+		},
 	})
 }

@@ -9,6 +9,3 @@ require (
 )
 
 require golang.org/x/crypto v0.31.0
-
-require github.com/dawcr/chirpy/internal/auth v1.0.0
-replace github.com/dawcr/chirpy/internal/auth => ./internal/auth

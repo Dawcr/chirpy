@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dawcr/chirpy/internal/auth"
 	"github.com/dawcr/chirpy/internal/database"
-	"github.com/dawcr/chirpy/internal/database/auth"
 	"github.com/google/uuid"
 )
 
@@ -34,7 +34,7 @@ func (c *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 
 	hashed, err := auth.HashPassword(param.Password)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Unable to set password", err)
+		respondWithError(w, http.StatusInternalServerError, "Unable to hash password", err)
 		return
 	}
 
