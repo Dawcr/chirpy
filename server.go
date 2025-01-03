@@ -15,9 +15,9 @@ const (
 	path_Root       = "."
 	path_App        = "/app/"
 	path_Healthz    = "/api/healthz"
-	path_Metricz    = "/admin/metrics"
+	path_Metrics    = "/admin/metrics"
 	path_Reset      = "/admin/reset"
-	path_PostChirp  = "/api/chirps"
+	path_Chirps     = "/api/chirps"
 	path_CreateUser = "/api/users"
 )
 
@@ -51,10 +51,11 @@ func startServer() {
 
 	mux.Handle(path_App, apiCfg.middlewareMetricsInc(http.StripPrefix(path_App, http.FileServer(http.Dir(path_Root)))))
 	mux.HandleFunc("GET "+path_Healthz, handlerReadiness)
-	mux.HandleFunc("GET "+path_Metricz, apiCfg.handlerHitCount)
+	mux.HandleFunc("GET "+path_Metrics, apiCfg.handlerHitCount)
 	mux.HandleFunc("POST "+path_Reset, apiCfg.handlerReset)
-	mux.HandleFunc("POST "+path_PostChirp, apiCfg.handlerChirpsValidation)
+	mux.HandleFunc("POST "+path_Chirps, apiCfg.handlerChirpsValidation)
 	mux.HandleFunc("POST "+path_CreateUser, apiCfg.handlerUsersCreate)
+	mux.HandleFunc("GET "+path_Chirps, apiCfg.handlerchirpsGet)
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,
