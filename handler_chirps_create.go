@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -10,11 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	maxChirpLength = 140
-)
-
-type Chirp_message struct {
+type Chirp struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -28,7 +25,7 @@ func (cfg *apiConfig) handlerChirpsValidation(w http.ResponseWriter, r *http.Req
 		UserID uuid.UUID `json:"user_id"`
 	}
 	type response struct {
-		Chirp_message
+		Chirp
 	}
 
 	params := parameters{}
@@ -37,13 +34,11 @@ func (cfg *apiConfig) handlerChirpsValidation(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if len(params.Body) > maxChirpLength {
-		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
+	cleaned_body, err := validateChirp(params.Body)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
 	}
-
-	banned_words := mapBanned("kerfuffle", "sharbert", "fornax")
-	cleaned_body := replaceProfane(params.Body, banned_words)
 
 	dbResponse, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleaned_body, // use the version without profanities
@@ -55,7 +50,7 @@ func (cfg *apiConfig) handlerChirpsValidation(w http.ResponseWriter, r *http.Req
 	}
 
 	respondWithJSON(w, http.StatusCreated, response{
-		Chirp_message: Chirp_message{
+		Chirp: Chirp{
 			ID:        dbResponse.ID,
 			CreatedAt: dbResponse.CreatedAt,
 			UpdatedAt: dbResponse.UpdatedAt,
@@ -63,6 +58,19 @@ func (cfg *apiConfig) handlerChirpsValidation(w http.ResponseWriter, r *http.Req
 			UserID:    dbResponse.UserID,
 		},
 	})
+}
+
+func validateChirp(body string) (string, error) {
+	const maxChirpLength = 140
+	banned_words := []string{"kerfuffle", "sharbert", "fornax"}
+
+	if len(body) > maxChirpLength {
+		return "", errors.New("Chirp is too long")
+	}
+
+	cleaned_body := replaceProfane(body, mapBanned(banned_words...))
+
+	return cleaned_body, nil
 }
 
 func replaceProfane(chirp string, banned map[string]struct{}) string {
