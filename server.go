@@ -16,13 +16,15 @@ const (
 	filepathSite          = "/app/"
 	filepathHealthz       = "/api/healthz"
 	filepathMetricz       = "/admin/metrics"
-	filepathResetMetricz  = "/admin/reset"
+	filepathReset         = "/admin/reset"
 	filepathValidateChirp = "/api/validate_chirp"
+	filepathCreateUser    = "/api/users"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	platform       string
 }
 
 func startServer() {
@@ -40,13 +42,15 @@ func startServer() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             database.New(db),
+		platform:       os.Getenv("PLATFORM"),
 	}
 
 	mux.Handle(filepathSite, apiCfg.middlewareMetricsInc(http.StripPrefix(filepathSite, http.FileServer(http.Dir(filepathRoot)))))
 	mux.HandleFunc("GET "+filepathHealthz, handlerReadiness)
 	mux.HandleFunc("GET "+filepathMetricz, apiCfg.handlerHitCount)
-	mux.HandleFunc("POST "+filepathResetMetricz, apiCfg.handlerResetHitCount)
+	mux.HandleFunc("POST "+filepathReset, apiCfg.handlerReset)
 	mux.HandleFunc("POST "+filepathValidateChirp, handlerChirpsValidation)
+	mux.HandleFunc("POST "+filepathCreateUser, apiCfg.handlerCreateUser)
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,
