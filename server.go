@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	port                 = "8080"
-	filepathRoot         = "."
-	filepathAPP          = "/app/"
-	filepathHealthz      = "/healthz"
-	filepathMetricz      = "/metrics"
-	filepathResetMetricz = "/reset"
+	port                  = "8080"
+	filepathRoot          = "."
+	filepathSite          = "/app/"
+	filepathHealthz       = "/api/healthz"
+	filepathMetricz       = "/admin/metrics"
+	filepathResetMetricz  = "/admin/reset"
+	filepathValidateChirp = "/api/validate_chirp"
 )
 
 type apiConfig struct {
@@ -25,10 +26,11 @@ func startServer() {
 		fileserverHits: atomic.Int32{},
 	}
 
-	mux.Handle(filepathAPP, apiCfg.middlewareMetricsInc(http.StripPrefix(filepathAPP, http.FileServer(http.Dir(filepathRoot)))))
-	mux.HandleFunc(filepathHealthz, handlerReadiness)
-	mux.HandleFunc(filepathMetricz, apiCfg.handlerHitCount)
-	mux.HandleFunc(filepathResetMetricz, apiCfg.handlerResetHitCount)
+	mux.Handle(filepathSite, apiCfg.middlewareMetricsInc(http.StripPrefix(filepathSite, http.FileServer(http.Dir(filepathRoot)))))
+	mux.HandleFunc("GET "+filepathHealthz, handlerReadiness)
+	mux.HandleFunc("GET "+filepathMetricz, apiCfg.handlerHitCount)
+	mux.HandleFunc("POST "+filepathResetMetricz, apiCfg.handlerResetHitCount)
+	mux.HandleFunc("POST "+filepathValidateChirp, handlerChirpsValidation)
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,
