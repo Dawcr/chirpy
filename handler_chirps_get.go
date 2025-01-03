@@ -2,7 +2,7 @@ package main
 
 import "net/http"
 
-func (cfg *apiConfig) handlerchirpsGet(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerChirpsGet(w http.ResponseWriter, r *http.Request) {
 
 	dbResponse, err := cfg.db.GetChirps(r.Context())
 	if err != nil {
