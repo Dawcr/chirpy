@@ -11,14 +11,14 @@ import (
 )
 
 const (
-	port               = "8080"
-	path_Root          = "."
-	path_App           = "/app/"
-	path_Healthz       = "/api/healthz"
-	path_Metricz       = "/admin/metrics"
-	path_Reset         = "/admin/reset"
-	path_ValidateChirp = "/api/validate_chirp"
-	path_CreateUser    = "/api/users"
+	port            = "8080"
+	path_Root       = "."
+	path_App        = "/app/"
+	path_Healthz    = "/api/healthz"
+	path_Metricz    = "/admin/metrics"
+	path_Reset      = "/admin/reset"
+	path_PostChirp  = "/api/chirps"
+	path_CreateUser = "/api/users"
 )
 
 type apiConfig struct {
@@ -53,7 +53,7 @@ func startServer() {
 	mux.HandleFunc("GET "+path_Healthz, handlerReadiness)
 	mux.HandleFunc("GET "+path_Metricz, apiCfg.handlerHitCount)
 	mux.HandleFunc("POST "+path_Reset, apiCfg.handlerReset)
-	mux.HandleFunc("POST "+path_ValidateChirp, handlerChirpsValidation)
+	mux.HandleFunc("POST "+path_PostChirp, apiCfg.handlerChirpsValidation)
 	mux.HandleFunc("POST "+path_CreateUser, apiCfg.handlerUsersCreate)
 
 	server := &http.Server{
