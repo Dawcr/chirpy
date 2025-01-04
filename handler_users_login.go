@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/dawcr/chirpy/internal/auth"
+	"github.com/dawcr/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) {
 	type loginRequest struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	type response struct {
 		User
-		Token string `json:"token,omitempty"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	param := loginRequest{}
@@ -37,14 +38,25 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	expirationTime := time.Hour
-	if param.ExpiresInSeconds > 0 && param.ExpiresInSeconds < 3600 {
-		expirationTime = time.Duration(param.ExpiresInSeconds) * time.Second
-	}
-
-	userJWT, err := auth.MakeJWT(dbResponse.ID, cfg.jwtSecret, expirationTime)
+	accessToken, err := auth.MakeJWT(dbResponse.ID, cfg.jwtSecret, accessTokenDuration)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to create access JWT", err)
+		return
+	}
+
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to create refresh token", err)
+		return
+	}
+
+	err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    dbResponse.ID,
+		ExpiresAt: time.Now().UTC().Add(60 * time.Hour * 24),
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to store refresh token", err)
 		return
 	}
 
@@ -55,6 +67,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 			UpdatedAt: dbResponse.UpdatedAt,
 			Email:     dbResponse.Email,
 		},
-		Token: userJWT,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	})
 }

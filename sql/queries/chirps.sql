@@ -2,8 +2,8 @@
 INSERT INTO chirps (id, created_at, updated_at, body, user_id)
 VALUES (
     gen_random_uuid(),
-    NOW(),
-    NOW(),
+    NOW() AT TIME ZONE 'UTC',
+    NOW() AT TIME ZONE 'UTC',
     $1,
     $2
 )
