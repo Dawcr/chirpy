@@ -1,6 +1,113 @@
 package auth
 
-import "testing"
+import (
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+func TestGetBearerToken(t *testing.T) {
+	t.Run("valid header should return bearer token", func(t *testing.T) {
+		headers := http.Header{}
+		headers.Add("Authorization", "Bearer abc123")
+		token, err := GetBearerToken(headers)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if token != "abc123" {
+			t.Fatalf("expected token 'abc123', got '%v'", token)
+		}
+	})
+
+	t.Run("missing authorization header should return error", func(t *testing.T) {
+		headers := http.Header{}
+		_, err := GetBearerToken(headers)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+
+	t.Run("empty token after Bearer should return error", func(t *testing.T) {
+		headers := http.Header{}
+		headers.Add("Authorization", "Bearer  ")
+		_, err := GetBearerToken(headers)
+		if err == nil {
+			t.Fatal("expected error for empty token")
+		}
+	})
+
+	t.Run("header without Bearer prefix should return error", func(t *testing.T) {
+		headers := http.Header{}
+		headers.Add("Authorization", "NotBearer abc123")
+		_, err := GetBearerToken(headers)
+		if err == nil {
+			t.Fatal("expected error for missing Bearer prefix")
+		}
+	})
+}
+
+func TestValidateJWT(t *testing.T) {
+	const testingSecret = "vgiAfdi/lRsoH2ZqNsbt2FYg1j0u8M2u1EFAnHHCtqsb985DZvGZRzXqGeBS3FmbrhmvocPTAJygA4i0wrrMuw=="
+
+	t.Run("valid JWT should return correct userID", func(t *testing.T) {
+		userID := uuid.New()
+		token, err := MakeJWT(userID, testingSecret, time.Hour)
+		if err != nil {
+			t.Fatalf("error creating JWT: %s", err)
+		}
+
+		gotID, err := ValidateJWT(token, testingSecret)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if gotID != userID {
+			t.Errorf("expected user ID %v, got %v", userID, gotID)
+		}
+	})
+
+	t.Run("expired JWT should return error", func(t *testing.T) {
+		userID := uuid.New()
+		token, err := MakeJWT(userID, testingSecret, time.Nanosecond)
+		if err != nil {
+			t.Fatalf("error creating JWT: %s", err)
+		}
+		time.Sleep(time.Millisecond)
+
+		_, err = ValidateJWT(token, testingSecret)
+		if err.Error() != "token is invalid or has expired" {
+			t.Fatalf("expected expired warning, instead got %v", err)
+		}
+	})
+
+	t.Run("JWT signed with wrong secret should return error", func(t *testing.T) {
+		userID := uuid.New()
+		altSecret := "qUFtedLvBJk4yIeig/8DPrbAkzPK8JOrd47qc9bW7BumKAgCfj+7hXi09KUcQOTKUymha8Bh9RP7miLh6lbUlw=="
+		token, err := MakeJWT(userID, altSecret, time.Nanosecond)
+		if err != nil {
+			t.Fatalf("error creating JWT: %s", err)
+		}
+
+		_, err = ValidateJWT(token, testingSecret)
+		if err.Error() != "token is invalid or has expired" {
+			t.Fatalf("expected wrong secret warning, instead got %v", err)
+		}
+	})
+
+	t.Run("malformed JWT should return error", func(t *testing.T) {
+		userID := uuid.New()
+		token, err := MakeJWT(userID, testingSecret, time.Nanosecond)
+		if err != nil {
+			t.Fatalf("error creating JWT: %s", err)
+		}
+
+		_, err = ValidateJWT(token[5:], testingSecret)
+		if err.Error() != "token is invalid or has expired" {
+			t.Fatalf("expected invalid warning, instead got %v", err)
+		}
+	})
+}
 
 // boot.dev tests
 func TestCheckPasswordHash(t *testing.T) {

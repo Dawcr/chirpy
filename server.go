@@ -11,21 +11,14 @@ import (
 )
 
 const (
-	port            = "8080"
-	path_Root       = "."
-	path_App        = "/app/"
-	path_Healthz    = "/api/healthz"
-	path_Metrics    = "/admin/metrics"
-	path_Reset      = "/admin/reset"
-	path_Chirps     = "/api/chirps"
-	path_CreateUser = "/api/users"
-	path_Login      = "/api/login"
+	port = "8080"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	secret         string
 }
 
 func startServer() {
@@ -36,6 +29,10 @@ func startServer() {
 	platform := os.Getenv("PLATFORM")
 	if platform == "" {
 		log.Fatal("PLATFORM must be set")
+	}
+	secret := os.Getenv("SECRET")
+	if secret == "" {
+		log.Fatal("SECRET must be set")
 	}
 
 	db, err := sql.Open("postgres", dbURL)
@@ -48,17 +45,18 @@ func startServer() {
 		fileserverHits: atomic.Int32{},
 		db:             database.New(db),
 		platform:       platform,
+		secret:         secret,
 	}
 
-	mux.Handle(path_App, apiCfg.middlewareMetricsInc(http.StripPrefix(path_App, http.FileServer(http.Dir(path_Root)))))
-	mux.HandleFunc("GET "+path_Healthz, handlerReadiness)
-	mux.HandleFunc("GET "+path_Metrics, apiCfg.handlerHitCount)
-	mux.HandleFunc("POST "+path_Reset, apiCfg.handlerReset)
-	mux.HandleFunc("POST "+path_Chirps, apiCfg.handlerChirpsValidation)
-	mux.HandleFunc("POST "+path_CreateUser, apiCfg.handlerUsersCreate)
-	mux.HandleFunc("GET "+path_Chirps, apiCfg.handlerChirpsGet)
-	mux.HandleFunc("GET "+path_Chirps+"/{chirpID}", apiCfg.handlerChirpsGetSingle)
-	mux.HandleFunc("POST "+path_Login, apiCfg.handlerUsersLogin)
+	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerHitCount)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreation)
+	mux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsGet)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGetSingle)
+	mux.HandleFunc("POST /api/login", apiCfg.handlerUsersLogin)
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,
