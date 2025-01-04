@@ -18,7 +18,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
-	secret         string
+	jwtSecret      string
 }
 
 func startServer() {
@@ -30,9 +30,9 @@ func startServer() {
 	if platform == "" {
 		log.Fatal("PLATFORM must be set")
 	}
-	secret := os.Getenv("SECRET")
+	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		log.Fatal("SECRET must be set")
+		log.Fatal("JWT_SECRET environment variable is not set")
 	}
 
 	db, err := sql.Open("postgres", dbURL)
@@ -45,7 +45,7 @@ func startServer() {
 		fileserverHits: atomic.Int32{},
 		db:             database.New(db),
 		platform:       platform,
-		secret:         secret,
+		jwtSecret:      secret,
 	}
 
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))

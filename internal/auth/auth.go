@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -12,12 +13,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type TokenType string
+
 const (
-	chosenCost = 12
+	// Password hash cost
+	chosenPasswordHashCost = 12
+	// TokenTypeAccess -
+	TokenTypeAccess TokenType = "chirpy-access"
 )
 
+// ErrNoAuthHeaderIncluded -
+var ErrNoAuthHeaderIncluded = errors.New("no auth header included in request")
+
+// HashPassword -
 func HashPassword(password string) (string, error) {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(password), chosenCost)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), chosenPasswordHashCost)
 	if err != nil {
 		log.Fatalf("Error hashing password: %s", err)
 	}
@@ -25,61 +35,69 @@ func HashPassword(password string) (string, error) {
 	return string(hashed), nil
 }
 
+// CheckPasswordHash -
 func CheckPasswordHash(password, hash string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
+// MakeJWT -
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
-	tkn := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:    "chirpy",
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+	signingKey := []byte(tokenSecret)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    string(TokenTypeAccess),
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
 		Subject:   userID.String(),
 	})
-	return tkn.SignedString([]byte(tokenSecret))
+	return token.SignedString(signingKey)
 }
 
+// ValidateJWT -
 func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
-	claims := &jwt.RegisteredClaims{}
-	tkn, err := jwt.ParseWithClaims(
+	claimsStruct := jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(
 		tokenString,
-		claims,
+		&claimsStruct,
 		func(t *jwt.Token) (interface{}, error) {
 			return []byte(tokenSecret), nil
 		},
 	)
-	if err != nil || !tkn.Valid {
+	if err != nil || !token.Valid {
 		return uuid.Nil, errors.New("token is invalid or has expired")
 	}
 
-	id, err := tkn.Claims.GetSubject()
+	id, err := token.Claims.GetSubject()
 	if err != nil {
 		return uuid.Nil, errors.New("unable to access users id from claims")
 	}
 
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if issuer != string(TokenTypeAccess) {
+		return uuid.Nil, errors.New("invalid issuer")
+	}
+
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return uuid.Nil, errors.New("error parsing uuid")
+		return uuid.Nil, fmt.Errorf("invalid user ID: %w", err)
 	}
 
 	return uid, nil
 }
 
+// GetBearerToken -
 func GetBearerToken(headers http.Header) (string, error) {
-	tokenString := headers.Get("Authorization")
-	if tokenString == "" {
-		return "", errors.New("no authorization header")
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", ErrNoAuthHeaderIncluded
 	}
 
-	if !strings.HasPrefix(tokenString, "Bearer") {
-		return "", errors.New("missing bearer prefix")
+	splitAuth := strings.Split(authHeader, " ")
+	if len(splitAuth) < 2 || splitAuth[0] != "Bearer" || splitAuth[1] == "" {
+		return "", errors.New("malformed authorization header")
 	}
 
-	tokenString = strings.TrimPrefix(tokenString, "Bearer")
-	tokenString = strings.TrimSpace(tokenString)
-	if tokenString == "" {
-		return "", errors.New("bearer token is empty")
-	}
-
-	return tokenString, nil
+	return splitAuth[1], nil
 }

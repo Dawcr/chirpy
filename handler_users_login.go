@@ -12,11 +12,12 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 	type loginRequest struct {
 		Password         string `json:"password"`
 		Email            string `json:"email"`
-		ExpiresInSeconds *int   `json:"expires_in_seconds,omitempty"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 
 	type response struct {
 		User
+		Token string `json:"token,omitempty"`
 	}
 
 	param := loginRequest{}
@@ -36,16 +37,14 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var expirationTime time.Duration
-	if param.ExpiresInSeconds == nil || *param.ExpiresInSeconds > 3600 || *param.ExpiresInSeconds <= 0 { // if not set, longer than 1 hour or negative
-		expirationTime = time.Hour
-	} else {
-		expirationTime = time.Duration(*param.ExpiresInSeconds) * time.Second
+	expirationTime := time.Hour
+	if param.ExpiresInSeconds > 0 && param.ExpiresInSeconds < 3600 {
+		expirationTime = time.Duration(param.ExpiresInSeconds) * time.Second
 	}
 
-	userJWT, err := auth.MakeJWT(dbResponse.ID, cfg.secret, expirationTime)
+	userJWT, err := auth.MakeJWT(dbResponse.ID, cfg.jwtSecret, expirationTime)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Unable to create JWT for user", err)
+		respondWithError(w, http.StatusInternalServerError, "Unable to create access JWT", err)
 		return
 	}
 
@@ -55,7 +54,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 			CreatedAt: dbResponse.CreatedAt,
 			UpdatedAt: dbResponse.UpdatedAt,
 			Email:     dbResponse.Email,
-			Token:     userJWT,
 		},
+		Token: userJWT,
 	})
 }

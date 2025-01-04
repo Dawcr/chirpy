@@ -24,19 +24,16 @@ func (cfg *apiConfig) handlerChirpsCreation(w http.ResponseWriter, r *http.Reque
 	type parameters struct {
 		Body string `json:"body"`
 	}
-	type response struct {
-		Chirp
-	}
 
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		respondWithError(w, http.StatusUnauthorized, "Unable to find JWT", err)
 		return
 	}
 
-	userID, err := auth.ValidateJWT(token, cfg.secret)
+	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		respondWithError(w, http.StatusUnauthorized, "Unable to validate JWT", err)
 		return
 	}
 
@@ -61,14 +58,12 @@ func (cfg *apiConfig) handlerChirpsCreation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, response{
-		Chirp: Chirp{
-			ID:        dbResponse.ID,
-			CreatedAt: dbResponse.CreatedAt,
-			UpdatedAt: dbResponse.UpdatedAt,
-			Body:      dbResponse.Body,
-			UserID:    dbResponse.UserID,
-		},
+	respondWithJSON(w, http.StatusCreated, Chirp{
+		ID:        dbResponse.ID,
+		CreatedAt: dbResponse.CreatedAt,
+		UpdatedAt: dbResponse.UpdatedAt,
+		Body:      dbResponse.Body,
+		UserID:    dbResponse.UserID,
 	})
 }
 
