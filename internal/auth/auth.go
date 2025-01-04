@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -31,7 +30,7 @@ var ErrNoAuthHeaderIncluded = errors.New("no auth header included in request")
 func HashPassword(password string) (string, error) {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), chosenPasswordHashCost)
 	if err != nil {
-		log.Fatalf("Error hashing password: %s", err)
+		return "", err
 	}
 
 	return string(hashed), nil
@@ -65,12 +64,12 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		},
 	)
 	if err != nil || !token.Valid {
-		return uuid.Nil, errors.New("token is invalid or has expired")
+		return uuid.Nil, err
 	}
 
 	id, err := token.Claims.GetSubject()
 	if err != nil {
-		return uuid.Nil, errors.New("unable to access users id from claims")
+		return uuid.Nil, err
 	}
 
 	issuer, err := token.Claims.GetIssuer()
@@ -109,7 +108,7 @@ func MakeRefreshToken() (string, error) {
 	randData := make([]byte, 32)
 	_, err := rand.Read(randData)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate random data")
+		return "", fmt.Errorf("failed to generate random data with err: %s", err)
 	}
 	return hex.EncodeToString(randData), nil
 }

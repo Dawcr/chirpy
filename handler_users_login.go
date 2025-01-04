@@ -50,7 +50,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     refreshToken,
 		UserID:    dbResponse.ID,
 		ExpiresAt: time.Now().UTC().Add(60 * time.Hour * 24),
