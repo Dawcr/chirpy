@@ -39,7 +39,7 @@ func (cfg *apiConfig) handlerChirpsGetSingle(w http.ResponseWriter, r *http.Requ
 
 	dbResponse, err := cfg.db.GetChirpsSingle(r.Context(), chirpUUID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Unable to retrieve chirp", err)
+		respondWithError(w, http.StatusNotFound, "Chirp not found", err)
 		return
 	}
 
