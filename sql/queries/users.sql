@@ -13,7 +13,7 @@ RETURNING *;
 SELECT * FROM users
 WHERE email = $1;
 
--- name: UpdateUserEmailPassword :one
+-- name: UpdateUser :one
 UPDATE users
 SET email = $2,
 hashed_password = $3,

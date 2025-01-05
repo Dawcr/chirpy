@@ -9,6 +9,15 @@ import (
 )
 
 func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	type response struct {
+		User
+	}
+
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "No token provided in header", err)
@@ -19,15 +28,6 @@ func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Unable to validate JWT", err)
 		return
-	}
-
-	type request struct {
-		Password string `json:"password"`
-		Email    string `json:"email"`
-	}
-
-	type response struct {
-		User
 	}
 
 	param := request{}
@@ -42,7 +42,7 @@ func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	dbResponse, err := cfg.db.UpdateUserEmailPassword(r.Context(), database.UpdateUserEmailPasswordParams{
+	dbResponse, err := cfg.db.UpdateUser(r.Context(), database.UpdateUserParams{
 		ID:             userID,
 		Email:          param.Email,
 		HashedPassword: hashed,
