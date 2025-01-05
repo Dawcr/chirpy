@@ -20,3 +20,10 @@ hashed_password = $3,
 updated_at = NOW() AT TIME ZONE 'UTC'
 WHERE id = $1
 RETURNING *;
+
+-- name: UpgradeUserToChirpyRed :one
+UPDATE users
+set is_chirpy_red = TRUE,
+updated_at = NOW() AT TIME ZONE 'UTC'
+WHERE id = $1
+RETURNING *;
