@@ -12,7 +12,7 @@ func (cfg *apiConfig) handlerChirpsDelete(w http.ResponseWriter, r *http.Request
 
 	chirpUUID, err := uuid.Parse(chirpID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Unable to parse chirp ID", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid Chirp ID", err)
 		return
 	}
 
