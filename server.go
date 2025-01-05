@@ -61,7 +61,7 @@ func startServer() {
 	mux.HandleFunc("POST /api/revoke", apiCfg.handlerTokensRevoke)
 	mux.HandleFunc("PUT /api/users", apiCfg.handlerUsersUpdate)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerChirpsDelete)
-	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.webhookUsersUpgrade)
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerWebhook)
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,

@@ -90,7 +90,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	return i, err
 }
 
-const upgradeUserToChirpyRed = `-- name: UpgradeUserToChirpyRed :one
+const upgradeToChirpyRed = `-- name: UpgradeToChirpyRed :one
 UPDATE users
 set is_chirpy_red = TRUE,
 updated_at = NOW() AT TIME ZONE 'UTC'
@@ -98,8 +98,8 @@ WHERE id = $1
 RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
-func (q *Queries) UpgradeUserToChirpyRed(ctx context.Context, id uuid.UUID) (User, error) {
-	row := q.db.QueryRowContext(ctx, upgradeUserToChirpyRed, id)
+func (q *Queries) UpgradeToChirpyRed(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, upgradeToChirpyRed, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
