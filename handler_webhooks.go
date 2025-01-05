@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/dawcr/chirpy/internal/auth"
 	"github.com/google/uuid"
 )
 
@@ -24,6 +25,12 @@ func (cfg *apiConfig) handlerWebhook(w http.ResponseWriter, r *http.Request) {
 
 	if param.Event != "user.upgraded" {
 		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	key, err := auth.GetAPIKey(r.Header)
+	if err != nil || key != cfg.polkaKey {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
 		return
 	}
 
