@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/dawcr/chirpy/internal/database"
 	"github.com/google/uuid"
@@ -9,6 +10,7 @@ import (
 
 func (cfg *apiConfig) handlerChirpsGet(w http.ResponseWriter, r *http.Request) {
 	s := r.URL.Query().Get("author_id")
+	order := r.URL.Query().Get("sort")
 
 	var dbResponse []database.Chirp
 
@@ -22,7 +24,7 @@ func (cfg *apiConfig) handlerChirpsGet(w http.ResponseWriter, r *http.Request) {
 	} else {
 		uid, err := uuid.Parse(s)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Unable to parse userID", err)
+			respondWithError(w, http.StatusInternalServerError, "Invalid author ID", err)
 			return
 		}
 		dbResponse, err = cfg.db.GetChirpsFromUser(r.Context(), uid)
@@ -41,6 +43,10 @@ func (cfg *apiConfig) handlerChirpsGet(w http.ResponseWriter, r *http.Request) {
 			Body:      chirp.Body,
 			UserID:    chirp.UserID,
 		})
+	}
+
+	if order == "desc" {
+		slices.Reverse(response)
 	}
 
 	respondWithJSON(w, http.StatusOK, response)
